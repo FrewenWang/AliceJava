@@ -1359,6 +1359,11 @@ public class File
      * 重新命名此抽象路径名表示的文件。
      * Renames the file denoted by this abstract pathname.
      * 此方法行为的许多方面都是与平台有关的：重命名操作无法将一个文件从一个文件系统移动到另一个文件系统，
+     * 1、文件可以进行移动；2、在同一平台操作
+     *
+     * 如果已经存在具有目标抽象路径名的文件，那么该操作可能无法获得成功。应该始终检查返回值，以确保重命名操作成功。
+     * 两点：1、如果目标路径下有相同的文件名称，则命名失败（或者移动失败）；2、实际开发中要注意返回值，为true则表示命名（移动）成功！
+     *
      * <p> Many aspects of the behavior of this method are inherently
      * platform-dependent: The rename operation might not be able to move a
      * file from one filesystem to another, it might not be atomic, and it
@@ -1383,6 +1388,16 @@ public class File
      *
      * @throws  NullPointerException
      *          If parameter <code>dest</code> is <code>null</code>
+     *
+     * renameTo使用说明:
+     * 第一种场景：同一路径下文件重命名【文件重命名】
+     * 第二种场景：将文件从一个路径移动另一个路径下，并且移动的文件进行重命名【文件移动重命名】
+     * 第三种场景：修改文件夹的名称，文件夹里面没有文件的时候修改成功！
+     *
+     * renameTo 可以重命名文件，也可以进行文件的移动操作！
+     * 在实际的开发中一般可以用于移动文件，比如 日志文件的备份，
+     * 将每天的日志文件定时扫描移动到 一个备份文件下。
+     * 可以使用场景2，如 love.log —> love.2017-10-24.log！
      */
     public boolean renameTo(File dest) {
         SecurityManager security = System.getSecurityManager();
