@@ -1356,8 +1356,9 @@ public class File
     }
 
     /**
+     * 重新命名此抽象路径名表示的文件。
      * Renames the file denoted by this abstract pathname.
-     *
+     * 此方法行为的许多方面都是与平台有关的：重命名操作无法将一个文件从一个文件系统移动到另一个文件系统，
      * <p> Many aspects of the behavior of this method are inherently
      * platform-dependent: The rename operation might not be able to move a
      * file from one filesystem to another, it might not be atomic, and it
@@ -1370,6 +1371,7 @@ public class File
      * platform independent manner.
      *
      * @param  dest  The new abstract pathname for the named file
+     *               指定文件的新抽象路径名
      *
      * @return  <code>true</code> if and only if the renaming succeeded;
      *          <code>false</code> otherwise
