@@ -134,6 +134,9 @@ import sun.misc.SharedSecrets;
  * @see     TreeMap
  * @see     Hashtable
  * @since   1.2
+ *
+ *HashMap是基于拉链法实现的一个散列表，它存储的内容是键值对(key-value)映射,内部由数组和链表和红黑树实现。
+ *HashMap 继承于AbstractMap，实现了Map、Cloneable、java.io.Serializable接口。
  */
 public class HashMap<K,V> extends AbstractMap<K,V>
     implements Map<K,V>, Cloneable, Serializable {
@@ -232,6 +235,8 @@ public class HashMap<K,V> extends AbstractMap<K,V>
 
     /**
      * The default initial capacity - MUST be a power of two.
+     * 默认初始容量-必须为2的幂。
+     * 为什么必须为2的倍数呢？？
      */
     static final int DEFAULT_INITIAL_CAPACITY = 1 << 4; // aka 16
 
@@ -244,6 +249,8 @@ public class HashMap<K,V> extends AbstractMap<K,V>
 
     /**
      * The load factor used when none specified in constructor.
+     * 在构造函数中未指定时使用的默认加载因子，
+     * 这个加载因子为什么是0.75呢？？
      */
     static final float DEFAULT_LOAD_FACTOR = 0.75f;
 
@@ -254,6 +261,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * than 2 and should be at least 8 to mesh with assumptions in
      * tree removal about conversion back to plain bins upon
      * shrinkage.
+     * 进行树形化变换的阈值计算，为什么是8呢
      */
     static final int TREEIFY_THRESHOLD = 8;
 
@@ -261,6 +269,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * The bin count threshold for untreeifying a (split) bin during a
      * resize operation. Should be less than TREEIFY_THRESHOLD, and at
      * most 6 to mesh with shrinkage detection under removal.
+     * 取消树形化的变化阈值，为什么是6呢？
      */
     static final int UNTREEIFY_THRESHOLD = 6;
 
@@ -319,6 +328,8 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     /* ---------------- Static utilities -------------- */
 
     /**
+     * 我们看一下Hash的计算。入参是key
+     *
      * Computes key.hashCode() and spreads (XORs) higher bits of hash
      * to lower.  Because the table uses power-of-two masking, sets of
      * hashes that vary only in bits above the current mask will
@@ -609,6 +620,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      *         previously associated <tt>null</tt> with <tt>key</tt>.)
      */
     public V put(K key, V value) {
+        // 这个方法调用了putVal()。入参的时候调用hash(key)这个方法代码中有讲解
         return putVal(hash(key), key, value, false, true);
     }
 
