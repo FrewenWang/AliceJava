@@ -258,7 +258,13 @@ import java.util.stream.Stream;
  * <p>This class is a member of the
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
- *
+ *  ConcurrentHashMap是J.U.C(java.util.concurrent包)的重要成员，
+ *  它是HashMap的一个线程安全的、支持高效并发的版本。在默认理想状态下，
+ *  ConcurrentHashMap可以支持16个线程执行并发写操作及任意数量线程的读操作。
+ *  本文将结合Java内存模型，分析JDK源代码，探索ConcurrentHashMap高并发的具体实现机制，
+ *  包括其在JDK中的定义和结构、并发存取、重哈希和跨段操作，
+ *  并着重剖析了ConcurrentHashMap读操作不需要加锁和分段锁机制的内在奥秘和原理。
+ *  https://www.cnblogs.com/ylspace/p/12726672.html
  * @since 1.5
  * @author Doug Lea
  * @param <K> the type of keys maintained by this map
@@ -507,24 +513,28 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * bounds for power of two table sizes, and is further required
      * because the top two bits of 32bit hash fields are used for
      * control purposes.
+     * node数组最大容量：2^30=1073741824
      */
     private static final int MAXIMUM_CAPACITY = 1 << 30;
 
     /**
      * The default initial table capacity.  Must be a power of 2
      * (i.e., at least 1) and at most MAXIMUM_CAPACITY.
+     * 默认初始数组的容量，必须是2的幂数
      */
     private static final int DEFAULT_CAPACITY = 16;
 
     /**
      * The largest possible (non-power of two) array size.
      * Needed by toArray and related methods.
+     * 数组可能最大值，需要与toArray（）相关方法关联
      */
     static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
 
     /**
      * The default concurrency level for this table. Unused but
      * defined for compatibility with previous versions of this class.
+     * 并发级别，遗留下来的，为兼容以前的版本。
      */
     private static final int DEFAULT_CONCURRENCY_LEVEL = 16;
 
@@ -534,6 +544,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * actual floating point value isn't normally used -- it is
      * simpler to use expressions such as {@code n - (n >>> 2)} for
      * the associated resizing threshold.
+     *  负载因子
      */
     private static final float LOAD_FACTOR = 0.75f;
 
@@ -544,6 +555,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * than 2, and should be at least 8 to mesh with assumptions in
      * tree removal about conversion back to plain bins upon
      * shrinkage.
+     * 链表转红黑树阀值,> 8 链表转换为红黑树
      */
     static final int TREEIFY_THRESHOLD = 8;
 
@@ -551,6 +563,8 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * The bin count threshold for untreeifying a (split) bin during a
      * resize operation. Should be less than TREEIFY_THRESHOLD, and at
      * most 6 to mesh with shrinkage detection under removal.
+     * 树转链表阀值，小于等于6（tranfer时，lc、hc=0两个计数器分别++记录原bin、
+     * 新binTreeNode数量，<=UNTREEIFY_THRESHOLD 则untreeify(lo)）
      */
     static final int UNTREEIFY_THRESHOLD = 6;
 
@@ -580,6 +594,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
     /**
      * The maximum number of threads that can help resize.
      * Must fit in 32 - RESIZE_STAMP_BITS bits.
+     * 2^15-1，help resize的最大线程数
      */
     private static final int MAX_RESIZERS = (1 << (32 - RESIZE_STAMP_BITS)) - 1;
 
@@ -615,14 +630,19 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * in bulk tasks.  Subclasses of Node with a negative hash field
      * are special, and contain null keys and values (but are never
      * exported).  Otherwise, keys and vals are never null.
+     * Node是ConcurrentHashMap存储结构的基本单元，继承于HashMap中的Entry，用于存储数据，源代码如下
      */
-    static class Node<K,V> implements Map.Entry<K,V> {
+    static class Node<K, V> implements Map.Entry<K, V> {
+        //链表的数据结构
         final int hash;
         final K key;
+        // val和next都会在扩容时发生变化，所以加上volatile来保持可见性和禁止重排序
         volatile V val;
-        volatile Node<K,V> next;
+        volatile Node<K, V> next;
 
-        Node(int hash, K key, V val, Node<K,V> next) {
+        // Node节点的数据接口：hash值、key、value、链表的下一个节点
+        // Node数据结构很简单，从上可知，就是一个链表，但是只允许对数据进行查找，不允许进行修改
+        Node(int hash, K key, V val, Node<K, V> next) {
             this.hash = hash;
             this.key = key;
             this.val = val;
@@ -633,6 +653,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
         public final V getValue()     { return val; }
         public final int hashCode()   { return key.hashCode() ^ val.hashCode(); }
         public final String toString(){ return key + "=" + val; }
+        // 不允许更新value
         public final V setValue(V value) {
             throw new UnsupportedOperationException();
         }
@@ -769,6 +790,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
     /**
      * The array of bins. Lazily initialized upon first insertion.
      * Size is always a power of two. Accessed directly by iterators.
+     * Map的节点数组
      */
     transient volatile Node<K,V>[] table;
 
@@ -819,6 +841,10 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
 
     /**
      * Creates a new, empty map with the default initial table size (16).
+     * 这个构造函数ConcurrentHashMap的初始化其实是一个空实现，并没有做任何事，
+     * 这里后面会讲到，这也是和其他的集合类有区别的地方，
+     * 初始化操作并不是在构造函数实现的，而是在put操作中实现，
+     * 当然ConcurrentHashMap还提供了其他的构造函数，有指定容量大小或者指定负载因子，跟HashMap一样，这里就不做介绍了
      */
     public ConcurrentHashMap() {
     }
@@ -928,23 +954,40 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * {@code k} to a value {@code v} such that {@code key.equals(k)},
      * then this method returns {@code v}; otherwise it returns
      * {@code null}.  (There can be at most one such mapping.)
-     *
+     * 根据key的hash值定位，遍历链表或者红黑树，获取节点。
+     * 具体一点：
+     * 1.根据key的hash值定位到桶位置。
+     * 2.map是否初始化，没有初始化则返回null。否则进入3
+     * 3.定位到的桶位置是否有头结点，没有返回nul,否则进入4
+     * 4.是否有其他线程在扩容，有的话调用find方法查找。所以这里可以看出，扩容操作和get操作不冲突，扩容map的同时可以get操作。
+     * 5.若没有其他线程在扩容，则遍历桶对应的链表或者红黑树，使用equals方法进行比较。key相同则返回value,不存在则返回null.
+     * 并发问题：假如此时正好有别的线程正在对数组扩容怎么办？
+     *          答：没关系，扩容的时候不会破坏原来的table，遍历任然可以继续，不需要加锁。
      * @throws NullPointerException if the specified key is null
      */
     public V get(Object key) {
-        Node<K,V>[] tab; Node<K,V> e, p; int n, eh; K ek;
+        Node<K, V>[] tab;
+        Node<K, V> e, p;
+        int n, eh;
+        K ek;
+        // 获取所有查找的key的hash值
         int h = spread(key.hashCode());
+        // Table数组不为空
         if ((tab = table) != null && (n = tab.length) > 0 &&
-            (e = tabAt(tab, (n - 1) & h)) != null) {
+                // 获取hash值对应的element的元素
+                (e = tabAt(tab, (n - 1) & h)) != null) {
+            // 进行头部节点的hash值的判断
             if ((eh = e.hash) == h) {
+                /// 判断key是否相等
                 if ((ek = e.key) == key || (ek != null && key.equals(ek)))
                     return e.val;
-            }
-            else if (eh < 0)
+                // 如果头部节点的hash值小于0
+            } else if (eh < 0)
                 return (p = e.find(h, key)) != null ? p.val : null;
+            /// 进行节点遍历
             while ((e = e.next) != null) {
                 if (e.hash == h &&
-                    ((ek = e.key) == key || (ek != null && key.equals(ek))))
+                        ((ek = e.key) == key || (ek != null && key.equals(ek))))
                     return e.val;
             }
         }
@@ -1001,47 +1044,92 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * @return the previous value associated with {@code key}, or
      *         {@code null} if there was no mapping for {@code key}
      * @throws NullPointerException if the specified key or value is null
+     * 先根据key的hash值定位桶位置，然后cas操作获取该位置头节点，
+     * 接着使用synchronized锁锁住头节点，遍历该位置的链表或者红黑树进行插入操作。
+     *
      */
     public V put(K key, V value) {
         return putVal(key, value, false);
     }
 
-    /** Implementation for put and putIfAbsent */
+    /**
+     * Implementation for put and putIfAbsent
+     * 具体实现：
+     *
+     * 1.根据key的hash值定位到桶位置
+     *
+     * 2.判断if(table==null)，先初始化table。
+     *
+     * 3.判断if(table[i]==null),cas添加元素。成功则跳出循环，失败则进入下一轮for循环。
+     *
+     * 4.判断是否有其他线程在扩容table，有则帮忙扩容，扩容完成再添加元素。进入真正的put步骤
+     *
+     * 5.真正的put步骤。桶的位置不为空，遍历该桶的链表或者红黑树，若key已存在，则覆盖；不存在则将key插入到链表或红黑树的尾部。
+     **/
     final V putVal(K key, V value, boolean onlyIfAbsent) {
         if (key == null || value == null) throw new NullPointerException();
+        // 两次hash，减少hash冲突，可以均匀分布.尽量让hash值可以均匀分布
         int hash = spread(key.hashCode());
         int binCount = 0;
+        //对这个table进行迭代，这里是一个死循环，可能的出口如下
         for (Node<K,V>[] tab = table;;) {
-            Node<K,V> f; int n, i, fh;
+            // findNode找到的节点
+            Node<K,V> f;
+            //  n:Table数组的的长度  i:索引值  fh:findNode的节点hash值
+            int n, i, fh;
+            // 当我们进行put的时候，如果数组没有进行初始化
+            // 这里就是上面构造方法没有进行初始化，在这里进行判断，
+            // 为null就调用initTable进行初始化，属于懒汉模式初始化
             if (tab == null || (n = tab.length) == 0)
+                // 初始化节点数组
                 tab = initTable();
+                // 如果i位置没有数据，就直接无锁插入
             else if ((f = tabAt(tab, i = (n - 1) & hash)) == null) {
+
+                //这里使用了CAS，避免使用锁。如果CAS失败，说明该节点已经发生改变，
+                //可能被其他线程插入了，那么继续执行死循环，在链尾插入。
                 if (casTabAt(tab, i, null,
                              new Node<K,V>(hash, key, value, null)))
+                    //可能的出口一：完成插入之后
                     break;                   // no lock when adding to empty bin
             }
+            // 如果在进行扩容，则先进行扩容操作
+            // 如果tab正在resize，则帮忙一起执行resize
+            // 这里监测到的的条件是目标桶被设置成了FORWORD。如果桶没有设置为
+            // FORWORD节点，即使正在扩容，该线程也无感知。
             else if ((fh = f.hash) == MOVED)
                 tab = helpTransfer(tab, f);
+            // 执行put操作.下面就是正式执行put操作
             else {
+                //如果以上条件都不满足，那就要进行加锁操作，也就是存在hash冲突，锁住链表或者红黑树的头结点
                 V oldVal = null;
+                //这里请求了synchronized锁。这里要注意，不会出现
+                //桶正在resize的过程中执行插入，因为桶resize的时候
+                //也请求了synchronized锁。即如果该桶正在resize，这里会发生锁等待
                 synchronized (f) {
+                    //如果是链表的首个节点
                     if (tabAt(tab, i) == f) {
+                        // 并且是一个用户节点，非Forwarding等节点
                         if (fh >= 0) {
                             binCount = 1;
                             for (Node<K,V> e = f;; ++binCount) {
                                 K ek;
+                                // 找到相等的元素更新其value
                                 if (e.hash == hash &&
                                     ((ek = e.key) == key ||
                                      (ek != null && key.equals(ek)))) {
                                     oldVal = e.val;
                                     if (!onlyIfAbsent)
                                         e.val = value;
+                                    //可能的出口二
                                     break;
                                 }
                                 Node<K,V> pred = e;
+                                //否则添加到链表尾部
                                 if ((e = e.next) == null) {
                                     pred.next = new Node<K,V>(hash, key,
                                                               value, null);
+                                    //可能的出口三
                                     break;
                                 }
                             }
@@ -1059,6 +1147,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
                     }
                 }
                 if (binCount != 0) {
+                    //如果链表长度（碰撞次数）超过8，将链表转化为红黑树
                     if (binCount >= TREEIFY_THRESHOLD)
                         treeifyBin(tab, i);
                     if (oldVal != null)
@@ -2219,9 +2308,12 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
 
     /**
      * Initializes table, using the size recorded in sizeCtl.
+     * 初始化Initializes的ConcurrentHashMap的Table数组
      */
     private final Node<K,V>[] initTable() {
+        // 声明table数组
         Node<K,V>[] tab; int sc;
+        /// 为空
         while ((tab = table) == null || tab.length == 0) {
             if ((sc = sizeCtl) < 0)
                 Thread.yield(); // lost initialization race; just spin
@@ -2296,6 +2388,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      */
     final Node<K,V>[] helpTransfer(Node<K,V>[] tab, Node<K,V> f) {
         Node<K,V>[] nextTab; int sc;
+        //nextTab为空时，则说明扩容已经完成
         if (tab != null && (f instanceof ForwardingNode) &&
             (nextTab = ((ForwardingNode<K,V>)f).nextTable) != null) {
             int rs = resizeStamp(tab.length);
@@ -2653,17 +2746,20 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
     /* ---------------- TreeNodes -------------- */
 
     /**
+     * TreeNode继承于Node，但是数据结构换成了二叉树结构，它是红黑树的数据的存储结构，用于红黑树中存储数据，
+     * 当链表的节点数大于8时会转换成红黑树的结构，他就是通过TreeNode作为存储结构代替Node来转换成黑红树源代码如下
      * Nodes for use in TreeBins
      */
-    static final class TreeNode<K,V> extends Node<K,V> {
-        TreeNode<K,V> parent;  // red-black tree links
-        TreeNode<K,V> left;
-        TreeNode<K,V> right;
-        TreeNode<K,V> prev;    // needed to unlink next upon deletion
+    static final class TreeNode<K, V> extends Node<K, V> {
+        TreeNode<K, V> parent;  // red-black tree links
+        TreeNode<K, V> left;
+        TreeNode<K, V> right;
+        TreeNode<K, V> prev;    // needed to unlink next upon deletion
+        //标志红黑树的红节点
         boolean red;
 
-        TreeNode(int hash, K key, V val, Node<K,V> next,
-                 TreeNode<K,V> parent) {
+        TreeNode(int hash, K key, V val, Node<K, V> next,
+                 TreeNode<K, V> parent) {
             super(hash, key, val, next);
             this.parent = parent;
         }
@@ -2673,6 +2769,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
         }
 
         /**
+         * 根据key查找 从根节点开始找出相应的TreeNode，
          * Returns the TreeNode (or null if not found) for the given key
          * starting at given root.
          */
@@ -2721,6 +2818,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
         volatile Thread waiter;
         volatile int lockState;
         // values for lockState
+        // 读写锁状态
         static final int WRITER = 1; // set while holding write lock
         static final int WAITER = 2; // set when waiting for write lock
         static final int READER = 4; // increment value for setting read lock
