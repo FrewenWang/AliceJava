@@ -78,6 +78,11 @@ public class BinarySearchTreeTest {
         return list.get(k - 1);
     }
 
+    /**
+     * 中旬遍历：
+     * @param root
+     * @param list
+     */
     private static void middleOrderTraversal(TreeNode<Integer> root, List<Integer> list) {
         if (null != null) {
             middleOrderTraversal(root.left, list);
