@@ -44,26 +44,6 @@ import java.util.List;
  * 计算这个算法题，我们首先要知道二叉搜索树的特点
  */
 public class Offer54KthLargestElements {
-    TreeNode treeNode = TreeNode.initBinarySearchTree();
-    int result = kthLargestElement(treeNode, 10);
 
-    private int kthLargestElement(TreeNode treeNode, int k) {
-        List<Integer> elements = new ArrayList<>();
-
-        middleOrderTraversal(treeNode, elements);
-        return elements.get(elements.size() - k);
-    }
-
-    /**
-     * 我们采用中序遍历，依次将元素放入到List中。这样其实就是将元素按照大小来进行拍窜
-     * @param treeNode
-     * @param elements
-     */
-    private void middleOrderTraversal(TreeNode treeNode, List<Integer> elements) {
-        if (treeNode != null) {
-            middleOrderTraversal(treeNode,elements);
-            elements.add(treeNode.val);
-            middleOrderTraversal(treeNode,elements);
-        }
     }
 }
