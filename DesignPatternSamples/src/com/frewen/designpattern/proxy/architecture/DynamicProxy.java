@@ -10,7 +10,7 @@ import java.lang.reflect.Method;
  */
 public class DynamicProxy implements InvocationHandler {
     /**
-     * 真实主题类
+     * 真实主题类(也就是被代理类的引擎)
      */
     private Object realSubject;
 
@@ -18,8 +18,13 @@ public class DynamicProxy implements InvocationHandler {
         this.realSubject = subject;
     }
 
+    public DynamicProxy() {
+        this.realSubject = new RealSubject();
+    }
+
     /**
      * 调用的代理类的具体方法放在方法中执行
+     *  动态代理底层是基于反射来实现的，这么说也不算错但稍微有些不全面。
      *
      * @param proxy
      * @param method
