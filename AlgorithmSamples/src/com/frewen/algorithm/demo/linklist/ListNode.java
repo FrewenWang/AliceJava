@@ -1,6 +1,9 @@
 package com.frewen.algorithm.demo.linklist;
 
 
+import java.util.LinkedList;
+import java.util.List;
+
 /**
  * 定义一个单链表
  * Java实现单链表：https://cloud.tencent.com/developer/article/1080633
@@ -63,13 +66,13 @@ public class ListNode<T> {
     }
 
     /**
-     * 遍历链表
+     * 遍历链表:
      *
      * @param head 头节点
      */
     public static void traverse(ListNode head) {
         //临时节点，从首节点开始
-        ListNode temp = head.next;
+        ListNode temp = head;
 
         while (temp != null) {
             System.out.print(temp.val + "->");
@@ -80,18 +83,39 @@ public class ListNode<T> {
     }
 
     /**
-     * 单链表节点的反转
+     * 使用递归方法进行单链表
+     * 单链表节点的反转。
+     * 主体思想就是：使用递归方法一次遍历每个节点。
      *
      * @param head
      */
     private static ListNode reverse(ListNode head) {
-        if (head == null || head.next == null) {
+        if (head == null || head.next == null){
             return head;
         }
         ListNode result = reverse(head.next);
         head.next.next = head;
         head.next = null;
         return result;
+    }
+
+    private static ListNode reverseBy(ListNode head) {
+        // 将ListNode的顶一个pre节点指向null
+        ListNode pre = null;
+        // 当前节点current指向head
+        ListNode current = head;
+
+        while (current != null) {
+            // 我们先保存一下链表的下一个节点。
+            ListNode next = current.next;
+            // 因为需要反转，所以我们将当前节点的下一个节点指向pre
+            current.next = pre;
+            // pre再指向当前节点
+            pre = current;
+            //
+            current = next;
+        }
+        return pre;
     }
 
 

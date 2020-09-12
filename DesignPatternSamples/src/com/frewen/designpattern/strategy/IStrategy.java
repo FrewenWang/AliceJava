@@ -1,5 +1,8 @@
 package com.frewen.designpattern.strategy;
 
+/**
+ * 抽象策略方法
+ */
 public interface IStrategy {
 
     void strategyMethod1();    //策略方法1

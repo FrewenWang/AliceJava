@@ -26,6 +26,8 @@ public class ClientTest {
 
     public static void main(String[] args) {
         ClientTest clientTest = new ClientTest();
+
+        /// 设置具体的策略实现对象
         clientTest.setStrategy(new ConcreteStrategyA());
 
         clientTest.strategyMethod1();

@@ -24,6 +24,6 @@ import java.util.List;
 public class L347TopKFrequentElements {
 
     public List<Integer> topKFrequent(int[] nums, int k) {
-
+        return null;
     }
 }

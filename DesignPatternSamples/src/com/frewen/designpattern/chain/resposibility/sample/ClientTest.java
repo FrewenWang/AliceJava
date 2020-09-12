@@ -5,7 +5,7 @@ package com.frewen.designpattern.chain.resposibility.sample;
  * <p>
  * 将这些对象连成一条链条，并沿着这个链条传递这个请求
  */
-public class ChainResponsibilityClient {
+public class ClientTest {
 
     public static void main(String[] args) {
         //构造各个层次的领导

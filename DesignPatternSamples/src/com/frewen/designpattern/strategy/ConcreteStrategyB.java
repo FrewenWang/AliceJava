@@ -1,5 +1,8 @@
 package com.frewen.designpattern.strategy;
 
+/**
+ * 具体策略B
+ */
 public class ConcreteStrategyB implements IStrategy {
     @Override
     public void strategyMethod1() {
