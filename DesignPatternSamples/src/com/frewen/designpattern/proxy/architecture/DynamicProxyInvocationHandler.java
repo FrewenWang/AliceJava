@@ -8,17 +8,17 @@ import java.lang.reflect.Method;
  * 主要是我们在开始的时候不知道需要代理哪个类？
  * 在执行期的时候才设置代理哪个类
  */
-public class DynamicProxy implements InvocationHandler {
+public class DynamicProxyInvocationHandler implements InvocationHandler {
     /**
      * 真实主题类(也就是被代理类的引擎)
      */
     private Object realSubject;
 
-    public DynamicProxy(Object subject) {
+    public DynamicProxyInvocationHandler(Object subject) {
         this.realSubject = subject;
     }
 
-    public DynamicProxy() {
+    public DynamicProxyInvocationHandler() {
         this.realSubject = new RealSubject();
     }
 
