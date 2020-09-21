@@ -1,6 +1,6 @@
 package com.frewen.designpattern.facade;
 
-public class PhoneImpl implements IPhone {
+public class SumsunPhone implements IPhone {
 
     @Override
     public void dial() {

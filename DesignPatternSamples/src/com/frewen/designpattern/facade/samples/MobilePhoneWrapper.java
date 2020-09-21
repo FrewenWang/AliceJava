@@ -3,9 +3,9 @@ package com.frewen.designpattern.facade;
 /**
  * 移动手机作为对外接口类
  */
-public class MobilePhone {
+public class MobilePhoneWrapper {
 
-    private IPhone phone = new PhoneImpl();
+    private IPhone phone = new SumsunPhone();
     private ICamera sumsunCamera = new SumsunCamera();
 
     public void dial() {
