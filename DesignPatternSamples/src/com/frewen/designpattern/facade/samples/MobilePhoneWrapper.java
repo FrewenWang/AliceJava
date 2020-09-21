@@ -1,4 +1,4 @@
-package com.frewen.designpattern.facade;
+package com.frewen.designpattern.facade.samples;
 
 /**
  * 移动手机作为对外接口类

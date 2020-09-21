@@ -1,4 +1,4 @@
-package com.frewen.designpattern.facade;
+package com.frewen.designpattern.facade.samples;
 
 public interface IPhone {
 
