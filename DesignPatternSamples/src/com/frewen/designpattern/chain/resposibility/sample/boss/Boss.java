@@ -1,4 +1,4 @@
-package com.frewen.designpattern.chain.resposibility.sample;
+package com.frewen.designpattern.chain.resposibility.sample.boss;
 
 public class Boss extends Leader {
     @Override

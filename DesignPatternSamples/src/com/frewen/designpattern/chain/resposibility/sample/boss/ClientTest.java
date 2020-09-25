@@ -1,4 +1,4 @@
-package com.frewen.designpattern.chain.resposibility.sample;
+package com.frewen.designpattern.chain.resposibility.sample.boss;
 
 /**
  * 责任链模式的使用场景：多个对象处理同一个请求。但是具体由哪个对象处理则由运行时动态决定

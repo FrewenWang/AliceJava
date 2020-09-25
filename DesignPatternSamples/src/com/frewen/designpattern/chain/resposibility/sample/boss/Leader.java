@@ -1,4 +1,4 @@
-package com.frewen.designpattern.chain.resposibility.sample;
+package com.frewen.designpattern.chain.resposibility.sample.boss;
 
 public abstract class Leader {
 
