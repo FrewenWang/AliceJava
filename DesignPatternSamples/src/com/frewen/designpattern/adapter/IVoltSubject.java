@@ -1,6 +1,6 @@
 package com.frewen.designpattern.adapter;
 
-public interface SocketAdapter {
+public interface IVoltSubject {
 
     Volt get120Volt();
 

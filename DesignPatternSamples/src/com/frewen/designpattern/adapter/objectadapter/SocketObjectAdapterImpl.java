@@ -1,13 +1,13 @@
 package com.frewen.designpattern.adapter.objectadapter;
 
 import com.frewen.designpattern.adapter.Socket;
-import com.frewen.designpattern.adapter.SocketAdapter;
+import com.frewen.designpattern.adapter.IVoltSubject;
 import com.frewen.designpattern.adapter.Volt;
 
 /**
  * 对象适配器模式
  */
-public class SocketObjectAdapterImpl implements SocketAdapter {
+public class SocketObjectAdapterImpl implements IVoltSubject {
 
     /**
      * Using Composition for adapter pattern
