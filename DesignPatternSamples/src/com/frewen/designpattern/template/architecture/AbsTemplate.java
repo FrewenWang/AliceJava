@@ -13,7 +13,7 @@ public abstract class AbsTemplate {
 
     public abstract void method4();
 
-    public void excute() {
+    public void execute() {
         method1();
         method2();
         method3();

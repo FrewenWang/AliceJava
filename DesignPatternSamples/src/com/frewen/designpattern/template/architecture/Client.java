@@ -5,9 +5,9 @@ public class Client {
     public static void main(String[] args) {
 
         AbsTemplate absTemplate = new ConcreteImplA();
-        absTemplate.excute();
+        absTemplate.execute();
 
         absTemplate = new ConcreteImplB();
-        absTemplate.excute();
+        absTemplate.execute();
     }
 }

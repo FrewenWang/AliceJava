@@ -620,6 +620,9 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
         }
 
         /** Delegates main run loop to outer runWorker  */
+        /**
+         * 将线程的运行循环委托给外部runWorker
+         */
         public void run() {
             runWorker(this);
         }
@@ -1121,7 +1124,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      * and the thread's UncaughtExceptionHandler have as accurate
      * information as we can provide about any problems encountered by
      * user code.
-     *
+     * 工作线程启动后，就进入runWorker(Worker w)方法。
      * @param w the worker
      */
     final void runWorker(Worker w) {
@@ -1131,6 +1134,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
         w.unlock(); // allow interrupts
         boolean completedAbruptly = true;
         try {
+            // while循环，循环判断任务是否为空，若不为空，执行任务；若取不到任务，或发生异常，退出循环，
             while (task != null || (task = getTask()) != null) {
                 w.lock();
                 // If pool is stopping, ensure thread is interrupted;
@@ -1164,6 +1168,8 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
             }
             completedAbruptly = false;
         } finally {
+            // 执行processWorkerExit(w, completedAbruptly);
+            // 在这个方法里把工作线程移除掉。
             processWorkerExit(w, completedAbruptly);
         }
     }
